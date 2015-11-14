@@ -38,7 +38,6 @@ describe 'Associatable' do
     it 'stores `belongs_to` options' do
       cat_assoc_options = Cat.assoc_options
       human_options = cat_assoc_options[:human]
-
       expect(human_options).to be_instance_of(BelongsToOptions)
       expect(human_options.foreign_key).to eq(:owner_id)
       expect(human_options.class_name).to eq('Human')
