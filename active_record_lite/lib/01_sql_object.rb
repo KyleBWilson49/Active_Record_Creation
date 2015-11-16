@@ -98,13 +98,12 @@ class SQLObject
   end
 
   def insert
-    columns = self.class.columns
-    col_names = columns.join(", ")
-    num_col = columns.count
-    question_marks = (["?"] * num_col).join(", ")
-    # attributes = attribute_values.join(", ")
+    # drop 1 to avoid inserting id (the first column)
+    columns = self.class.columns.drop(1)
+    col_names = columns.map(&:to_s).join(", ")
+    question_marks = (["?"] * columns.count).join(", ")
 
-    DBConnection.execute(<<-SQL, attribute_values)
+    DBConnection.execute(<<-SQL, *attribute_values.drop(1))
       INSERT INTO
         #{self.class.table_name} (#{col_names})
       VALUES
@@ -115,14 +114,10 @@ class SQLObject
   end
 
   def update
-    columns = self.class.columns
-    set_line = ""
-    columns.each_with_index do |name, idx|
-      set_line <<  "#{name} = ?, "
-    end
-    set_line = set_line[0...-2]
+    set_line = self.class.columns
+      .map { |attr| "#{attr} = ?" }.join(", ")
 
-    DBConnection.execute(<<-SQL, attribute_values, self.id)
+    DBConnection.execute(<<-SQL, *attribute_values, id)
       UPDATE
         #{self.class.table_name}
       SET
@@ -133,10 +128,6 @@ class SQLObject
   end
 
   def save
-    if self.id.nil?
-      self.insert
-    else
-      self.update
-    end
+    id.nil? ? insert : update
   end
 end
