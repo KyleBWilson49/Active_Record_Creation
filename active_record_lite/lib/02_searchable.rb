@@ -4,13 +4,7 @@ require_relative '01_sql_object'
 
 module Searchable
   def where(params)
-    where_line = ""
-    values = []
-    params.each do |key, val|
-      where_line << "#{key} = ? AND "
-      values << val
-    end
-    where_line = where_line.chomp(" AND ")
+    where_line = params.keys.map { |key| "#{key} = ?" }.join(" AND ")
 
     results = DBConnection.execute(<<-SQL, values)
       SELECT
@@ -21,9 +15,7 @@ module Searchable
         #{where_line}
     SQL
 
-    results.map do |result|
-      self.new(result)
-    end
+    parse_all(results)
   end
 end
 
