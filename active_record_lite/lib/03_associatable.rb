@@ -20,49 +20,56 @@ end
 
 class BelongsToOptions < AssocOptions
   def initialize(name, options = {})
-    @foreign_key = options[:foreign_key]
-    @foreign_key ||= "#{name}_id".to_sym
-    @primary_key = options[:primary_key]
-    @primary_key ||= :id
-    @class_name = options[:class_name]
-    @class_name ||= "#{name}".camelcase
+    defaults = {
+      :foreign_key => "#{name}_id".to_sym,
+      :class_name => name.to_s.camelcase,
+      :primary_key => :id
+    }
+
+    defaults.keys.each do |key|
+      self.send("#{key}=", options[key] || defaults[key])
+    end
   end
 end
 
 class HasManyOptions < AssocOptions
   def initialize(name, self_class_name, options = {})
-    @foreign_key = options[:foreign_key]
-    @foreign_key ||= "#{self_class_name.underscore}_id".to_sym
-    @primary_key = options[:primary_key]
-    @primary_key ||= :id
-    @class_name = options[:class_name]
-    @class_name ||= "#{name.to_s.singularize}".camelcase
+    defaults = {
+      :foreign_key => "#{self_class_name.underscore}_id".to_sym,
+      :class_name => name.to_s.singularize.camelcase,
+      :primary_key => :id
+    }
+
+    defaults.keys.each do |key|
+      self.send("#{key}=", options[key] || defaults[key])
+    end
   end
 end
 
 module Associatable
-  # Phase IIIb
   def belongs_to(name, options = {})
-    options = BelongsToOptions.new(name, options)
+    self.assoc_options[name] = BelongsToOptions.new(name, options)
 
-    define_method name do
-      f_key = send options.foreign_key
-      current_class = options.model_class
-      current_class.where(:id => f_key).first
+    define_method(name) do
+      options = self.class.assoc_options[name]
+
+      key_val = self.send(options.foreign_key)
+      options.model_class.where(options.primary_key => key_val).first
     end
-
-    assoc_options[name] = options
   end
 
   def has_many(name, options = {})
-    options = HasManyOptions.new(name, "#{self}", options)
+    self.assoc_options[name] =
+      HasManyOptions.new(name, self.name, options)
 
-    define_method name do
-      value = send options.primary_key
-      target_class = options.model_class
-      target_class.where(options.foreign_key => value)
+    define_method(name) do
+      options = self.class.assoc_options[name]
+
+      key_val = self.send(options.primary_key)
+      options.model_class.where(options.foreign_key => key_val)
     end
   end
+
 
   def assoc_options
     @results ||= {}
@@ -71,5 +78,4 @@ end
 
 class SQLObject
   extend Associatable
-
 end
