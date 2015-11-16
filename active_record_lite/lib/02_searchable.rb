@@ -1,6 +1,6 @@
 require_relative 'db_connection'
 require_relative '01_sql_object'
-require 'byebug'
+# require 'byebug'
 
 module Searchable
   def where(params)
